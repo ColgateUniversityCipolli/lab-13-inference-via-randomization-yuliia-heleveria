@@ -56,3 +56,19 @@ error.plot <- ggplot(dat.error.plot)+
        x = "t-statistics",
        y = "Potential error")
 
+################################################################################
+# Part c
+################################################################################
+alpha <- 0.05
+#calculate the critical value for the left-tailed test
+t.crit <- qnorm(alpha, mean = 0, sd = 1)
+
+#calculate pdf
+pdf.sample <- dnorm(t.crit, mean = 0, sd = 1)
+
+#calculate n 
+n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
+
+################################################################################
+# QUESTION 2
+################################################################################
