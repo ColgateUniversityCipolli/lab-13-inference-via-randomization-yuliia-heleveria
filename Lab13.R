@@ -9,6 +9,7 @@
 ################################################################################
 library(tidyverse)
 library(e1071)
+library(boot)
 
 ################################################################################
 # QUESTION 1
@@ -72,3 +73,26 @@ n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
 ################################################################################
 # QUESTION 2
 ################################################################################
+
+################################################################################
+# Part a
+################################################################################
+n.resamples <- 1000
+
+#separate closer and difference data
+dat.closer <- dat.finches$closer
+dat.diff <- dat.finches$diff
+
+#shift the mean of the data to be 0 under null hypothesis
+dat.closer.centered <- dat.closer - mean(dat.closer)
+
+#get standard deviation
+dat.closer.sd <- sd(dat.closer)
+
+#store the approximation of T-statistics
+t.stat.storage <- tibble(closer = rep(NA, n.resamples))
+
+#perform resampling and calculate T-statistics
+for (i in 1:n.resamples){
+  resample <- sample(dat.closer, size = n, replace = T)
+}
