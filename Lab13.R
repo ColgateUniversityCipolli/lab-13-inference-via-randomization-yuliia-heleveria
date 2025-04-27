@@ -1,9 +1,12 @@
-#check if bootsraping is correbt - do i need resample within resamples
+#check if bootstraping is correct - do i need resample within resamples
 #check p-value calculation
 #do we need to graph anything
 #how to compare in 2c
 #did i compute interval correctly by doung mean instead of t-test
 #check p values for randomization
+#check if everything runs in new R seession
+#rand ci using xbar ok?
+#check if my confidence intervals are correct
 
 ################################################################################
 # LAB 13 R CODE
@@ -131,6 +134,15 @@ mean.resample.diff <- mean(resamples.null.diff)
 ################################################################################
 # Part b
 ################################################################################
+# shift so H0 is true
+delta.close <- mean(resamples.null.closer) - mu0
+
+high.close <- mu0 + delta.close
+p.close.boot <- mean(resamples.null.closer >= high.closer)
+
+
+
+
 #calculate t-statistics on the original sample
 t.obs.closer <- mean(dat.closer)/(dat.closer.sd/sqrt(n))
 t.obs.further <- mean(dat.further)/(dat.further.sd/sqrt(n))
@@ -281,15 +293,220 @@ rand <- rand |>
 ################################################################################
 # Part b - compute p-value for each test
 ################################################################################
-#calcuate deltas
+#calculate deltas
 delta.closer <- abs(mean(dat.closer) - mu0)/(dat.closer.sd/sqrt(n))
-delta.further <- abs(mean(dat.further) - mu0)
-delta.diff <- abs(mean(dat.diff) - mu0)
+delta.further <- abs(mean(dat.further) - mu0)/(dat.further.sd/sqrt(n))
+delta.diff <- abs(mean(dat.diff) - mu0)/(dat.diff.sd/sqrt(n))
 
-#calculate high for closer data
+#calculate p-value for closer data
 high.closer <- mu0 + delta.closer
 p.close.rand <- mean(rand$t.stat.closer >= high.closer)
 
+#calculate p-value for further data
+low.further <- mu0 - delta.further
+p.further.rand <- mean(rand$t.stat.further <= low.further)
 
-(low <- mu0 - delta) # mirror
-(high<- mu0 + delta)   # xbar
+#calculate p-value for difference data
+low.diff <- mu0 - delta.further
+high.diff <- mu0 + delta.further
+p.diff.rand <- mean(rand$t.stat.diff <= low.diff) + mean(rand$t.stat.diff >= high.diff)
+
+################################################################################
+# Part c - compute confidence intervals
+################################################################################
+#confidence interval for closer data
+R <- 1000
+mu0.iterate <- 0.0001
+starting.point <- mean(dat.closer)
+
+#get the lower bound
+mu.lower <- starting.point
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.closer - mu.lower
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.lower) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.closer) - mu.lower)
+  high<- mu.lower + delta  
+  p.val <- mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.lower <- mu.lower - mu0.iterate
+  }
+}
+#get the upper bound
+mu.upper <- mean(dat.closer)
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.closer - mu.upper
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.upper) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.closer) - mu.upper)
+  high<- mu.upper + delta  
+  p.val <- mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.upper <- mu.upper + mu0.iterate
+  }
+}
+ci.close.rand <- c(mu.lower, mu.upper)
+
+#confidence interval for further data
+#get the lower bound
+starting.point <- mean(dat.further)
+mu.lower <- starting.point
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.further - mu.lower
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.lower) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.further) - mu.lower)
+  low <- mu.lower - delta  
+  p.val <- mean(rand$xbar <= low)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.lower <- mu.lower - mu0.iterate
+  }
+}
+#get the upper bound
+mu.upper <- mean(dat.further)
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.further - mu.upper
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.upper) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.further) - mu.upper)
+  low <- mu.upper - delta  
+  p.val <- mean(rand$xbar <= low)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.upper <- mu.upper + mu0.iterate
+  }
+}
+ci.further.rand <- c(mu.lower, mu.upper)
+
+#confidence interval for difference data
+#get the lower bound
+starting.point <- mean(dat.diff)
+mu.lower <- starting.point
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.diff - mu.lower
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.lower) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.diff) - mu.lower)
+  low <- mu.lower - delta
+  high <- mu.lower + delta
+  p.val <- mean(rand$xbar <= low) + mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.lower <- mu.lower - mu0.iterate
+  }
+}
+#get the upper bound
+mu.upper <- mean(dat.diff)
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.diff - mu.upper
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.upper) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.diff) - mu.upper)
+  low <- mu.upper - delta  
+  high <- mu.upper + delta
+  p.val <- mean(rand$xbar <= low) + mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.upper <- mu.upper + mu0.iterate
+  }
+}
+ci.diff.rand <- c(mu.lower, mu.upper)
