@@ -1,5 +1,7 @@
 #check if bootsraping is correbt - do i need resample within resamples
 #check p-value calculation
+#do we need to graph anything
+#how to compare in 2c
 
 ################################################################################
 # LAB 13 R CODE
@@ -136,4 +138,41 @@ t.obs.diff <- mean(dat.diff)/(dat.diff.sd/sqrt(n))
 p.val.closer <- mean(resamples.null.closer >= t.obs.closer) #right-tailed test
 p.val.further <- mean(resamples.null.further <= t.obs.further) #left-tailed test
 p.val.diff <- mean(abs(resamples.null.diff) >= abs(t.obs.diff)) #two-tailed test
+
+#compare with the t-test p-values
+t.test.closer <- t.test(dat.closer, mu = 0, alternative = "greater") 
+t.test.further <- t.test(dat.further, mu = 0, alternative = "less") 
+t.test.diff <- t.test(dat.diff, mu = 0, alternative = "two.sided")
+
+#extract their p-values
+t.test.closer.p <- t.test.closer$p.value
+t.test.further.p <- t.test.further$p.value
+t.test.diff.p <- t.test.diff$p.value
+
+#create a comparison table
+comparison.table <-tibble(
+  "Case" = c("Closer", "Further", "Difference"),
+  "Bootstrap" = c(p.val.closer, p.val.further, p.val.diff),
+  "T-test" = c(t.test.closer.p, t.test.further.p, t.test.diff.p)
+)
+
+################################################################################
+# Part c
+################################################################################
+#get 5th percentile of the shifted resamples
+close.5th <- quantile(resamples.null.closer, probs = 0.05)
+further.5th <- quantile(resamples.null.further, probs = 0.05)
+diff.5th <- quantile(resamples.null.diff, probs = 0.05)
+
+#calculate theoretical t-distribution value
+df <- n-1
+#approximate t0.05,n-1
+t.critical.5th <- qt(0.05, df)
+
+#comparison table
+comparison.table.percentilr <-tibble(
+  "Case" = c("Closer", "Further", "Difference"),
+  "Bootstrap" = c(close.5th, further.5th, diff.5th),
+  "Theoretical" = rep(t.critical.5th, 3)
+)
 
