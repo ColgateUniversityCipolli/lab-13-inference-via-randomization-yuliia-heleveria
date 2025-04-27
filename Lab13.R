@@ -176,3 +176,59 @@ comparison.table.percentilr <-tibble(
   "Theoretical" = rep(t.critical.5th, 3)
 )
 
+################################################################################
+# Part d - compute bootstrap percentile confidence intervals using resamples
+################################################################################
+mean.storage <- tibble(closer = rep(NA, n.resamples),
+                         further = rep(NA, n.resamples),
+                         diff = rep(NA, n.resamples))
+
+#perform resampling
+for (i in 1:n.resamples){
+  #resample
+  resample.closer <- sample(dat.closer, size = n, replace = T) 
+  resample.further <- sample(dat.further, size = n, replace = T) 
+  resample.diff <- sample(dat.diff, size = n, replace = T)
+  #calculate and store the mean
+  mean.storage$closer[i] = mean(resample.closer)
+  mean.storage$further[i] = mean(resample.further)
+  mean.storage$diff[i] = mean(resample.diff)
+}
+#confidence interval for closer data
+ci.lower.closer <- quantile(mean.storage$closer, probs = 0.025)
+ci.upper.closer <- quantile(mean.storage$closer, probs = 0.975)
+
+#confidence interval for further data
+ci.lower.further <- quantile(mean.storage$further, probs = 0.025)
+ci.upper.further <- quantile(mean.storage$further, probs = 0.975)
+
+#confidence interval for difference data
+ci.lower.diff <- quantile(mean.storage$diff, probs = 0.025)
+ci.upper.diff <- quantile(mean.storage$diff, probs = 0.975)
+
+#compute t-test confidence intervals
+t.test.closer <- t.test(dat.closer, mu = 0, alternative = "two.sided") 
+t.test.further <- t.test(dat.further, mu = 0, alternative = "two.sided") 
+t.test.diff <- t.test(dat.diff, mu = 0, alternative = "two.sided")
+
+#extract t-test confidence intervals 
+ci.closer.t.test <- t.test.closer$conf.int
+ci.closer.t.test.lower <- ci.closer.t.test[1] #get t-test CI for closer data
+ci.closer.t.test.upper <- ci.closer.t.test[2]
+
+ci.further.t.test <- t.test.further$conf.int
+ci.further.t.test.lower <- ci.further.t.test[1] #get t-test CI for further data
+ci.further.t.test.upper <- ci.further.t.test[2]
+
+ci.diff.t.test <- t.test.diff$conf.int
+ci.diff.t.test.lower <- ci.diff.t.test[1] #get t-test CI for diff data
+ci.diff.t.test.upper <- ci.diff.t.test[2]
+
+#create a comparison table
+ci.comparison.table <- tibble(
+  "Case" = c("Closer", "Further", "Diff"),
+  "Bootstrap CI Lower" = c(ci.lower.closer, ci.lower.further, ci.lower.diff),
+  "T-test CI Lower" = c(ci.closer.t.test.lower, ci.further.t.test.lower, ci.diff.t.test.lower),
+  "Bootstrap CI Upper" = c(ci.upper.closer, ci.upper.further, ci.upper.diff),
+  "T-test CI Upper" = c(ci.closer.t.test.upper, ci.further.t.test.upper, ci.diff.t.test.upper)
+)
