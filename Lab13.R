@@ -1,4 +1,5 @@
-#check if bootsraping is correbt
+#check if bootsraping is correbt - do i need resample within resamples
+#check p-value calculation
 
 ################################################################################
 # LAB 13 R CODE
@@ -80,7 +81,8 @@ n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
 ################################################################################
 # Part a
 ################################################################################
-n.resamples <- 1000
+n.resamples <- 10000
+mu0 <- 0
 
 #separate closer and difference data
 dat.closer <- dat.finches$closer
@@ -113,9 +115,9 @@ for (i in 1:n.resamples){
 }
 
 #store the shifted resamples in an object and shift the mean of the data to be 0 under null hypothesis
-resamples.null.closer <- t.stat.storage$closer - mean(t.stat.storage$closer)
-resamples.null.further <- t.stat.storage$further - mean(t.stat.storage$further)
-resamples.null.diff <- t.stat.storage$diff - mean(t.stat.storage$diff)
+resamples.null.closer <- t.stat.storage$closer - mean(t.stat.storage$closer) + mu0
+resamples.null.further <- t.stat.storage$further - mean(t.stat.storage$further) + mu0
+resamples.null.diff <- t.stat.storage$diff - mean(t.stat.storage$diff) + mu0
 
 #calculate the mean of resamples - should be 0 on average
 mean.resample.closer <- mean(resamples.null.closer)
@@ -125,50 +127,13 @@ mean.resample.diff <- mean(resamples.null.diff)
 ################################################################################
 # Part b
 ################################################################################
-nresamps <- 10000
-resamples <- tibble(tstat.closer=rep(NA, nresamps),
-                    tstat.further=rep(NA, nresamps),
-                    tstat.diff=rep(NA, nresamps))
-for(i in 1:nresamps){
-  curr.resample.closer <- sample(x = dat.closer,
-                          size = n,
-                          replace = T)
-  curr.resample.further <- sample(x = dat.further,
-                                 size = n,
-                                 replace = T)
-  curr.resample.diff <- sample(x = dat.diff,
-                                 size = n,
-                                 replace = T)
-  resamples$tstat.closer[i] <- mean(curr.resample.closer)/(dat.closer.sd/sqrt(n))
-  resamples$tstat.further[i] <- mean(curr.resample.further)/(dat.further.sd/sqrt(n))
-  resamples$tstat.diff[i] <- mean(curr.resample.diff)/(dat.diff.sd/sqrt(n))
-}
-
-# Shift the resamples to match the null
-shifted.resamples.closer <- resamples$tstat.closer - abs(mean(resamples$tstat.closer))
-shifted.resamples.further <- resamples$tstat.further + abs(mean(resamples$tstat.further))
-shifted.resamples.diff.low <- resamples$tstat.diff - abs(mean(resamples$tstat.diff))
-shifted.resamples.diff.high <- resamples$tstat.diff + abs(mean(resamples$tstat.diff))
+#calculate t-statistics on the original sample
+t.obs.closer <- mean(dat.closer)/(dat.closer.sd/sqrt(n))
+t.obs.further <- mean(dat.further)/(dat.further.sd/sqrt(n))
+t.obs.diff <- mean(dat.diff)/(dat.diff.sd/sqrt(n))
 
 # p-value: the proportion of observations that are at least as supportive of Ha
-p.boot.closer <- mean(shifted.resamples.closer >= mean(resamples$tstat.closer))
-mean(shifted.resamples.further <= mean(resamples$tstat.further))
-mean(shifted.resamples.diff.low <= mean(resamples$tstat.diff))
-mean(shifted.resamples.diff.high >= mean(resamples$tstat.diff))
+p.val.closer <- mean(resamples.null.closer >= t.obs.closer) #right-tailed test
+p.val.further <- mean(resamples.null.further <= t.obs.further) #left-tailed test
+p.val.diff <- mean(abs(resamples.null.diff) >= abs(t.obs.diff)) #two-tailed test
 
-# Helper Function
-boot.t <- function(d, ind){
-  mean(d[ind])/(sd)
-}
-
-#compute bootstrap p-value for shifted resamples
-boots.closer <- boot(data=dat.closer, 
-              statistic = boot_t_test(), 
-              R = 30000)
-
-#do bootsraping t_test
-boot_t_test(dat.closer, mu= 0, R = 30000, alternative = "greater")
-
-#calculate the p-value
-t.closer <- t.test(resamples.null.closer, alternative = "greater", mu = 0)
-p.closer.resample <- t.closer$p.value
