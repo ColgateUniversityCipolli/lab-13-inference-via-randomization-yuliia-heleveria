@@ -23,11 +23,11 @@ library(boot)
 library(boot.pval)
 
 ################################################################################
-# QUESTION 1
+# QUESTION 1 - approximate error from small samle size
 ################################################################################
 
 ################################################################################
-# Part a
+# Part a - potantial error in computing p-value
 ################################################################################
 #read the data file
 dat.finches <- read_csv("zebrafinches.csv")
@@ -48,7 +48,7 @@ pdf.finches <- dnorm(t, mean = 0, sd = 1)
 potential.error <- (skew/sqrt(n))*((2*t^2 +1)/6)*pdf.finches
 
 ################################################################################
-# Part b
+# Part b - error for t-statistics
 ################################################################################
 #generate a vector of t-values and compute pdf for each of them
 t.vals <- seq(from = -10, to = 10, length.out = 1000)
@@ -69,7 +69,7 @@ error.plot <- ggplot(dat.error.plot)+
        y = "Potential error")
 
 ################################################################################
-# Part c
+# Part c - compute sample size for a given error
 ################################################################################
 alpha <- 0.05
 #calculate the critical value for the left-tailed test
@@ -86,7 +86,7 @@ n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
 ################################################################################
 
 ################################################################################
-# Part a
+# Part a - perform bootstraping
 ################################################################################
 n.resamples <- 10000
 mu0 <- 0
@@ -132,17 +132,8 @@ mean.resample.further <- mean(resamples.null.further)
 mean.resample.diff <- mean(resamples.null.diff)
 
 ################################################################################
-# Part b
+# Part b - calculate bootstrap p-value
 ################################################################################
-# shift so H0 is true
-delta.close <- mean(resamples.null.closer) - mu0
-
-high.close <- mu0 + delta.close
-p.close.boot <- mean(resamples.null.closer >= high.closer)
-
-
-
-
 #calculate t-statistics on the original sample
 t.obs.closer <- mean(dat.closer)/(dat.closer.sd/sqrt(n))
 t.obs.further <- mean(dat.further)/(dat.further.sd/sqrt(n))
@@ -171,7 +162,7 @@ comparison.table <-tibble(
 )
 
 ################################################################################
-# Part c
+# Part c - compute 5th percentile of shifted resamples
 ################################################################################
 #get 5th percentile of the shifted resamples
 close.5th <- quantile(resamples.null.closer, probs = 0.05)
