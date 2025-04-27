@@ -2,6 +2,8 @@
 #check p-value calculation
 #do we need to graph anything
 #how to compare in 2c
+#did i compute interval correctly by doung mean instead of t-test
+#check p values for randomization
 
 ################################################################################
 # LAB 13 R CODE
@@ -77,7 +79,7 @@ pdf.sample <- dnorm(t.crit, mean = 0, sd = 1)
 n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
 
 ################################################################################
-# QUESTION 2
+# QUESTION 2 - Bootstrapping Procedure
 ################################################################################
 
 ################################################################################
@@ -232,3 +234,62 @@ ci.comparison.table <- tibble(
   "Bootstrap CI Upper" = c(ci.upper.closer, ci.upper.further, ci.upper.diff),
   "T-test CI Upper" = c(ci.closer.t.test.upper, ci.further.t.test.upper, ci.diff.t.test.upper)
 )
+
+################################################################################
+# QUESTION 3 - Randomization Procedure
+################################################################################
+
+################################################################################
+# Part a - performing randomization procedure
+################################################################################
+R <- 10000
+rand <- tibble(t.stat.closer = rep(NA, R), #place to store statistics 
+               t.stat.further = rep(NA, R),
+               t.stat.diff = rep(NA, R))
+
+#shift the data to be mean 0 under H0
+closer.shifted <- dat.closer - mu0
+further.shifted <- dat.further - mu0
+diff.shifted <- dat.diff - mu0
+
+#Randomize / Shuffle
+for(i in 1:R){
+  #randomize data
+  curr.rand.closer <- closer.shifted *
+    sample(x = c(-1, 1),
+           size = n,
+           replace = T)
+  curr.rand.further <- further.shifted *
+    sample(x = c(-1, 1),
+           size = n,
+           replace = T)
+  curr.rand.diff <- diff.shifted *
+    sample(x = c(-1, 1),
+           size = n,
+           replace = T)
+  #calculate and store t-statistics
+  rand$t.stat.closer[i] <- mean(curr.rand.closer)/(dat.closer.sd/sqrt(n))
+  rand$t.stat.further[i] <- mean(curr.rand.further)/(dat.further.sd/sqrt(n))
+  rand$t.stat.diff[i] <- mean(curr.rand.diff)/(dat.diff.sd/sqrt(n))
+}
+#shift randomized statistics back
+rand <- rand |>
+  mutate(t.stat.closer = t.stat.closer + mu0)|>
+  mutate(t.stat.further = t.stat.further + mu0)|>
+  mutate(t.stat.diff = t.stat.diff + mu0)
+
+################################################################################
+# Part b - compute p-value for each test
+################################################################################
+#calcuate deltas
+delta.closer <- abs(mean(dat.closer) - mu0)/(dat.closer.sd/sqrt(n))
+delta.further <- abs(mean(dat.further) - mu0)
+delta.diff <- abs(mean(dat.diff) - mu0)
+
+#calculate high for closer data
+high.closer <- mu0 + delta.closer
+p.close.rand <- mean(rand$t.stat.closer >= high.closer)
+
+
+(low <- mu0 - delta) # mirror
+(high<- mu0 + delta)   # xbar
