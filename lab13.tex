@@ -85,10 +85,70 @@ for the the further observations.
   where $f_Z(\cdot)$ and $F_Z(\cdot)$ are the Gaussian PDF and CDF and skew is the
   skewness of the data. What is the potential error in the computation of the 
   $p$-value when testing $H_0: \mu_X=0; H_a: \mu_X<0$ using the zebra finch further data? 
+\begin{knitrout}\scriptsize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{#read the data file}
+\hldef{dat.finches} \hlkwb{<-} \hlkwd{read_csv}\hldef{(}\hlsng{"zebrafinches.csv"}\hldef{)}
+\hlcom{#separate further column}
+\hldef{dat.further} \hlkwb{<-} \hldef{dat.finches}\hlopt{$}\hldef{further}
 
+\hldef{mu0} \hlkwb{=} \hlnum{0}
+\hlcom{#compute t-statistics to get the t-value for the further data}
+\hldef{t_furth} \hlkwb{<-} \hlkwd{t.test}\hldef{(dat.further,} \hlkwc{mu} \hldef{= mu0,} \hlkwc{alternative} \hldef{=} \hlsng{"less"}\hldef{)}
+\hldef{t} \hlkwb{<-} \hldef{t_furth}\hlopt{$}\hldef{statistic} \hlcom{#extract t}
+\hldef{n} \hlkwb{<-} \hlkwd{length}\hldef{(dat.further)} \hlcom{#get n}
+
+\hlcom{#calculate skewness of data}
+\hldef{skew} \hlkwb{<-} \hlkwd{skewness}\hldef{(dat.further)}
+
+\hlcom{#use Gaussian pdf and calculate the error}
+\hldef{pdf.finches} \hlkwb{<-} \hlkwd{dnorm}\hldef{(t,} \hlkwc{mean} \hldef{=} \hlnum{0}\hldef{,} \hlkwc{sd} \hldef{=} \hlnum{1}\hldef{)}
+\hldef{potential.error} \hlkwb{<-} \hldef{(skew}\hlopt{/}\hlkwd{sqrt}\hldef{(n))}\hlopt{*}\hldef{((}\hlnum{2}\hlopt{*}\hldef{t}\hlopt{^}\hlnum{2} \hlopt{+}\hlnum{1}\hldef{)}\hlopt{/}\hlnum{6}\hldef{)}\hlopt{*}\hldef{pdf.finches}
+
+\hldef{potential.error}
+\end{alltt}
+\begin{verbatim}
+##             t 
+## -1.226006e-13
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+The potential error in the computation of the $p$-value when testing $H_0: \mu_X=0; H_a: \mu_X<0$ using the zebra finch further data is \ensuremath{-1.2260063\times 10^{-13}}, which is extremely close to 0. Therefore, the t-test results on the zebra finch further data can be trusted even though the sample size is small. The Central Limit Theorem approximation works very well for the data. The error is negative, which means the true $p$-value is slightly lower than we assumed.
   \item Compute the error for $t$ statistics from -10 to 10 and plot a line
   that shows the error across $t$. Continue to use the skewness and 
   the sample size for the zebra finch further data.
+  
+\begin{knitrout}\scriptsize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlcom{#generate a vector of t-values and compute pdf for each of them}
+\hldef{t.vals} \hlkwb{<-} \hlkwd{seq}\hldef{(}\hlkwc{from} \hldef{=} \hlopt{-}\hlnum{10}\hldef{,} \hlkwc{to} \hldef{=} \hlnum{10}\hldef{,} \hlkwc{length.out} \hldef{=} \hlnum{1000}\hldef{)}
+\hldef{pdf.t.vals} \hlkwb{<-} \hlkwd{dnorm}\hldef{(t.vals,} \hlkwc{mean} \hldef{=} \hlnum{0}\hldef{,} \hlkwc{sd} \hldef{=} \hlnum{1}\hldef{)}
+
+\hlcom{#calculate the error across of all t}
+\hldef{t.potential.error} \hlkwb{<-} \hldef{(skew}\hlopt{/}\hlkwd{sqrt}\hldef{(n))}\hlopt{*}\hldef{((}\hlnum{2}\hlopt{*}\hldef{t.vals}\hlopt{^}\hlnum{2} \hlopt{+}\hlnum{1}\hldef{)}\hlopt{/}\hlnum{6}\hldef{)}\hlopt{*}\hldef{pdf.t.vals}
+
+\hlcom{#create a tibble to plot the errors for t-statistics}
+\hldef{dat.error.plot} \hlkwb{<-} \hlkwd{tibble}\hldef{(t.vals, t.potential.error)}
+
+\hlcom{#plot the error for the t-statistics }
+\hldef{error.plot} \hlkwb{<-} \hlkwd{ggplot}\hldef{(dat.error.plot)}\hlopt{+}
+\hlkwd{geom_line}\hldef{(}\hlkwd{aes}\hldef{(}\hlkwc{x}\hldef{= t.vals,} \hlkwc{y} \hldef{= t.potential.error))}\hlopt{+} \hlcom{#plot the line for the errors}
+\hlkwd{theme_bw}\hldef{()}\hlopt{+}
+\hlkwd{labs}\hldef{(}\hlkwc{title} \hldef{=} \hlsng{"Edgeworth approximation for the error for p-value across t"}\hldef{,}
+     \hlkwc{x} \hldef{=} \hlsng{"t-statistics"}\hldef{,}
+     \hlkwc{y} \hldef{=} \hlsng{"Potential error"}\hldef{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+\begin{knitrout}\scriptsize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
+\includegraphics[width=0.6\textwidth]{figure/unnamed-chunk-4-1} 
+\end{knitrout}
+
+
+The potential error in $p$-value estimation is minimal across all $t$ values, which supports the validity of t-test approximation. As $t$ gets closer to -10 and 10, the potential error is close to 0. The error becomes more negative as $t$ get closer to 0. However, when $t$ is 0, the error becomes less negative.
 
   \item Suppose we wanted to have a tail probability within 10\% of the desired
   $\alpha=0.05$. Recall we did a left-tailed test using the further data.

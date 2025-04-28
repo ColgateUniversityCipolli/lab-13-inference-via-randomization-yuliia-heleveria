@@ -16,6 +16,9 @@
 \begin{document}
 <<echo=F, message=F, warning=F>>=
 library(tidyverse)
+library(e1071)
+library(boot)
+library(boot.pval)
 @
 
 \begin{enumerate}
@@ -37,10 +40,57 @@ for the the further observations.
   where $f_Z(\cdot)$ and $F_Z(\cdot)$ are the Gaussian PDF and CDF and skew is the
   skewness of the data. What is the potential error in the computation of the 
   $p$-value when testing $H_0: \mu_X=0; H_a: \mu_X<0$ using the zebra finch further data? 
+  <<size = 'scriptsize', message=F, warning=F>>=
+#read the data file
+dat.finches <- read_csv("zebrafinches.csv")
+#separate further column
+dat.further <- dat.finches$further
 
+mu0 = 0
+#compute t-statistics to get the t-value for the further data
+t_furth <- t.test(dat.further, mu = mu0, alternative = "less")
+t <- t_furth$statistic #extract t
+n <- length(dat.further) #get n
+
+#calculate skewness of data
+skew <- skewness(dat.further)
+
+#use Gaussian pdf and calculate the error
+pdf.finches <- dnorm(t, mean = 0, sd = 1)
+potential.error <- (skew/sqrt(n))*((2*t^2 +1)/6)*pdf.finches
+
+potential.error
+@
+The potential error in the computation of the $p$-value when testing $H_0: \mu_X=0; H_a: \mu_X<0$ using the zebra finch further data is \Sexpr{potential.error}, which is extremely close to 0. Therefore, the t-test results on the zebra finch further data can be trusted even though the sample size is small. The Central Limit Theorem approximation works very well for the data. The error is negative, which means the true $p$-value is slightly lower than we assumed.
   \item Compute the error for $t$ statistics from -10 to 10 and plot a line
   that shows the error across $t$. Continue to use the skewness and 
   the sample size for the zebra finch further data.
+  
+  <<size = 'scriptsize', message=F, warning=F>>=
+#generate a vector of t-values and compute pdf for each of them
+t.vals <- seq(from = -10, to = 10, length.out = 1000)
+pdf.t.vals <- dnorm(t.vals, mean = 0, sd = 1)
+
+#calculate the error across of all t
+t.potential.error <- (skew/sqrt(n))*((2*t.vals^2 +1)/6)*pdf.t.vals
+
+#create a tibble to plot the errors for t-statistics
+dat.error.plot <- tibble(t.vals, t.potential.error)
+
+#plot the error for the t-statistics 
+error.plot <- ggplot(dat.error.plot)+
+  geom_line(aes(x= t.vals, y = t.potential.error))+ #plot the line for the errors
+  theme_bw()+
+  labs(title = "Edgeworth approximation for the error for p-value across t",
+       x = "t-statistics",
+       y = "Potential error")
+@
+<<size='scriptsize', message=FALSE, warning=FALSE, echo=FALSE, fig=TRUE, out.width="0.6\\textwidth">>=
+print(error.plot)
+@
+
+
+The potential error in $p$-value estimation is minimal across all $t$ values, which supports the validity of t-test approximation. As $t$ gets closer to -10 and 10, the potential error is close to 0. The error becomes more negative as $t$ get closer to 0. However, when $t$ is 0, the error becomes less negative.
 
   \item Suppose we wanted to have a tail probability within 10\% of the desired
   $\alpha=0.05$. Recall we did a left-tailed test using the further data.

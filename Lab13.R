@@ -1,12 +1,4 @@
-#check if bootstraping is correct - do i need resample within resamples
-#check p-value calculation
-#do we need to graph anything
-#how to compare in 2c
-#did i compute interval correctly by doung mean instead of t-test
-#check p values for randomization
-#check if everything runs in new R seession
-#rand ci using xbar ok?
-#check if my confidence intervals are correct
+#use figire envoronemnt for b
 
 ################################################################################
 # LAB 13 R CODE
@@ -27,7 +19,7 @@ library(boot.pval)
 ################################################################################
 
 ################################################################################
-# Part a - potantial error in computing p-value
+# Part a - potential error in computing p-value
 ################################################################################
 #read the data file
 dat.finches <- read_csv("zebrafinches.csv")
