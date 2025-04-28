@@ -186,7 +186,7 @@ We would need a sample size of $n = $ 521 to have a tail probability within 10\%
 \end{enumerate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Question 3
+% Question 2
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \item Complete the following steps to revisit the analyses from lab 11 using the
@@ -202,6 +202,72 @@ sampling distribution of the $T$ statistic:
   resamples shifted to ensure they are consistent with the null hypotheses at the average 
   (i.e., here ensure the shifted resamples are 0 on average, corresponding
   to $t=0$, for each case). 
+\begin{knitrout}\scriptsize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hldef{n.resamples} \hlkwb{<-} \hlnum{10000}
+\hldef{mu0} \hlkwb{<-} \hlnum{0}
+
+\hlcom{#separate closer and difference data}
+\hldef{dat.closer} \hlkwb{<-} \hldef{dat.finches}\hlopt{$}\hldef{closer}
+\hldef{dat.diff} \hlkwb{<-} \hldef{dat.finches}\hlopt{$}\hldef{diff}
+
+\hlcom{#get standard deviation}
+\hldef{dat.closer.sd} \hlkwb{<-} \hlkwd{sd}\hldef{(dat.closer)}
+\hldef{dat.further.sd} \hlkwb{<-} \hlkwd{sd}\hldef{(dat.further)}
+\hldef{dat.diff.sd} \hlkwb{<-} \hlkwd{sd}\hldef{(dat.diff)}
+
+\hlcom{#store the approximation of T-statistics}
+\hldef{t.stat.storage} \hlkwb{<-} \hlkwd{tibble}\hldef{(}\hlkwc{closer} \hldef{=} \hlkwd{rep}\hldef{(}\hlnum{NA}\hldef{, n.resamples),}
+                       \hlkwc{further} \hldef{=} \hlkwd{rep}\hldef{(}\hlnum{NA}\hldef{, n.resamples),}
+                       \hlkwc{diff} \hldef{=} \hlkwd{rep}\hldef{(}\hlnum{NA}\hldef{, n.resamples))}
+
+\hlcom{#perform resampling and calculate T-statistics}
+\hlkwa{for} \hldef{(i} \hlkwa{in} \hlnum{1}\hlopt{:}\hldef{n.resamples)\{}
+\hlcom{#resample}
+\hldef{resample.closer} \hlkwb{<-} \hlkwd{sample}\hldef{(dat.closer,} \hlkwc{size} \hldef{= n,} \hlkwc{replace} \hldef{= T)}
+\hldef{resample.further} \hlkwb{<-} \hlkwd{sample}\hldef{(dat.further,} \hlkwc{size} \hldef{= n,} \hlkwc{replace} \hldef{= T)}
+\hldef{resample.diff} \hlkwb{<-} \hlkwd{sample}\hldef{(dat.diff,} \hlkwc{size} \hldef{= n,} \hlkwc{replace} \hldef{= T)}
+\hlcom{#calculate T}
+\hldef{t.stat.closer} \hlkwb{<-} \hlkwd{mean}\hldef{(resample.closer)}\hlopt{/}\hldef{(dat.closer.sd}\hlopt{/}\hlkwd{sqrt}\hldef{(n))}
+\hldef{t.stat.further} \hlkwb{<-} \hlkwd{mean}\hldef{(resample.further)}\hlopt{/}\hldef{(dat.further.sd}\hlopt{/}\hlkwd{sqrt}\hldef{(n))}
+\hldef{t.stat.diff} \hlkwb{<-} \hlkwd{mean}\hldef{(resample.diff)}\hlopt{/}\hldef{(dat.diff.sd}\hlopt{/}\hlkwd{sqrt}\hldef{(n))}
+\hlcom{#store the statistics}
+\hldef{t.stat.storage}\hlopt{$}\hldef{closer[i]} \hlkwb{=} \hldef{t.stat.closer}
+\hldef{t.stat.storage}\hlopt{$}\hldef{further[i]} \hlkwb{=} \hldef{t.stat.further}
+\hldef{t.stat.storage}\hlopt{$}\hldef{diff[i]} \hlkwb{=} \hldef{t.stat.diff}
+\hldef{\}}
+
+\hlcom{#store the shifted resamples in an object and shift the mean of the data to be 0 under null hypothesis}
+\hldef{resamples.null.closer} \hlkwb{<-} \hldef{t.stat.storage}\hlopt{$}\hldef{closer} \hlopt{-} \hlkwd{mean}\hldef{(t.stat.storage}\hlopt{$}\hldef{closer)} \hlopt{+} \hldef{mu0}
+\hldef{resamples.null.further} \hlkwb{<-} \hldef{t.stat.storage}\hlopt{$}\hldef{further} \hlopt{-} \hlkwd{mean}\hldef{(t.stat.storage}\hlopt{$}\hldef{further)} \hlopt{+} \hldef{mu0}
+\hldef{resamples.null.diff} \hlkwb{<-} \hldef{t.stat.storage}\hlopt{$}\hldef{diff} \hlopt{-} \hlkwd{mean}\hldef{(t.stat.storage}\hlopt{$}\hldef{diff)} \hlopt{+} \hldef{mu0}
+
+\hlcom{#calculate the mean of resamples - should be 0 on average}
+\hldef{mean.resample.closer} \hlkwb{<-} \hlkwd{mean}\hldef{(resamples.null.closer)}
+\hldef{mean.resample.further} \hlkwb{<-} \hlkwd{mean}\hldef{(resamples.null.further)}
+\hldef{mean.resample.diff} \hlkwb{<-} \hlkwd{mean}\hldef{(resamples.null.diff)}
+
+\hldef{mean.resample.closer}
+\end{alltt}
+\begin{verbatim}
+## [1] -8.069767e-16
+\end{verbatim}
+\begin{alltt}
+\hldef{mean.resample.further}
+\end{alltt}
+\begin{verbatim}
+## [1] -9.716672e-17
+\end{verbatim}
+\begin{alltt}
+\hldef{mean.resample.diff}
+\end{alltt}
+\begin{verbatim}
+## [1] -4.621636e-16
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+We performed 10,000 resamples with replacement and computed t-statistics for each resample. Then, we shifted the resamples to make sure that they reflect the null hypothesis. We verified that the shifted resamples were properly centered around 0 by checking that their means were approximately zero: \texttt{mean.resample.closer} = \ensuremath{-8.0697671\times 10^{-16}}, \texttt{mean.resample.further} = \ensuremath{-9.7166719\times 10^{-17}}, and \texttt{mean.resample.diff} = \ensuremath{-4.6216364\times 10^{-16}}.
   \item Compute the bootstrap $p$-value for each test using the shifted resamples. 
   How do these compare to the $t$-test $p$-values?
     \item What is the 5$^{th}$ percentile of the shifted resamples under the null hypothesis? 

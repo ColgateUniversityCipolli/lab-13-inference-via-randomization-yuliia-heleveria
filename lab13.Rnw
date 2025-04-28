@@ -121,7 +121,7 @@ We would need a sample size of $n = $ \Sexpr{n.sample} to have a tail probabilit
 \end{enumerate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Question 3
+% Question 2
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \item Complete the following steps to revisit the analyses from lab 11 using the
@@ -137,6 +137,55 @@ sampling distribution of the $T$ statistic:
   resamples shifted to ensure they are consistent with the null hypotheses at the average 
   (i.e., here ensure the shifted resamples are 0 on average, corresponding
   to $t=0$, for each case). 
+  <<size = 'scriptsize', message=F, warning=F>>=
+n.resamples <- 10000
+mu0 <- 0
+
+#separate closer and difference data
+dat.closer <- dat.finches$closer
+dat.diff <- dat.finches$diff
+
+#get standard deviation
+dat.closer.sd <- sd(dat.closer)
+dat.further.sd <- sd(dat.further)
+dat.diff.sd <- sd(dat.diff)
+
+#store the approximation of T-statistics
+t.stat.storage <- tibble(closer = rep(NA, n.resamples),
+                         further = rep(NA, n.resamples),
+                         diff = rep(NA, n.resamples))
+
+#perform resampling and calculate T-statistics
+for (i in 1:n.resamples){
+  #resample
+  resample.closer <- sample(dat.closer, size = n, replace = T) 
+  resample.further <- sample(dat.further, size = n, replace = T) 
+  resample.diff <- sample(dat.diff, size = n, replace = T)
+  #calculate T
+  t.stat.closer <- mean(resample.closer)/(dat.closer.sd/sqrt(n)) 
+  t.stat.further <- mean(resample.further)/(dat.further.sd/sqrt(n))
+  t.stat.diff <- mean(resample.diff)/(dat.diff.sd/sqrt(n))
+  #store the statistics
+  t.stat.storage$closer[i] = t.stat.closer 
+  t.stat.storage$further[i] = t.stat.further 
+  t.stat.storage$diff[i] = t.stat.diff 
+}
+
+#store the shifted resamples in an object and shift the mean of the data to be 0 under null hypothesis
+resamples.null.closer <- t.stat.storage$closer - mean(t.stat.storage$closer) + mu0
+resamples.null.further <- t.stat.storage$further - mean(t.stat.storage$further) + mu0
+resamples.null.diff <- t.stat.storage$diff - mean(t.stat.storage$diff) + mu0
+
+#calculate the mean of resamples - should be 0 on average
+mean.resample.closer <- mean(resamples.null.closer)
+mean.resample.further <- mean(resamples.null.further)
+mean.resample.diff <- mean(resamples.null.diff)
+
+mean.resample.closer 
+mean.resample.further 
+mean.resample.diff
+@
+We performed 10,000 resamples with replacement and computed t-statistics for each resample. Then, we shifted the resamples to make sure that they reflect the null hypothesis. We verified that the shifted resamples were properly centered around 0 by checking that their means were approximately zero: \texttt{mean.resample.closer} = \Sexpr{mean.resample.closer}, \texttt{mean.resample.further} = \Sexpr{mean.resample.further}, and \texttt{mean.resample.diff} = \Sexpr{mean.resample.diff}.
   \item Compute the bootstrap $p$-value for each test using the shifted resamples. 
   How do these compare to the $t$-test $p$-values?
     \item What is the 5$^{th}$ percentile of the shifted resamples under the null hypothesis? 
