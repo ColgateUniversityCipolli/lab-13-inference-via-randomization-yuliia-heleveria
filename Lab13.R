@@ -1,5 +1,3 @@
-#use figire envoronemnt for b
-
 ################################################################################
 # LAB 13 R CODE
 # YULIIA HELEVERIA
@@ -72,6 +70,7 @@ pdf.sample <- dnorm(t.crit, mean = 0, sd = 1)
 
 #calculate n 
 n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
+n.sample <- ceiling(n.sample) #round n to the closest positive integer
 
 ################################################################################
 # QUESTION 2 - Bootstrapping Procedure

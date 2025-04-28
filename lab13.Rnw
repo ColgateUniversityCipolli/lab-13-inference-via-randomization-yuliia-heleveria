@@ -81,16 +81,20 @@ dat.error.plot <- tibble(t.vals, t.potential.error)
 error.plot <- ggplot(dat.error.plot)+
   geom_line(aes(x= t.vals, y = t.potential.error))+ #plot the line for the errors
   theme_bw()+
-  labs(title = "Edgeworth approximation for the error for p-value across t",
+  labs(title = "Edgeworth approximation for the error for p-value",
        x = "t-statistics",
        y = "Potential error")
 @
-<<size='scriptsize', message=FALSE, warning=FALSE, echo=FALSE, fig=TRUE, out.width="0.6\\textwidth">>=
-print(error.plot)
+\begin{figure}[H] \begin{center}
+<<echo=FALSE, warning=FALSE, message=FALSE, fig.dim=c(5,3.5)>>=
+error.plot
 @
+\caption{Edgeworth approximation for the error for p-value across t} \label{plot.error} 
+\end{center}
+\end{figure}
 
 
-The potential error in $p$-value estimation is minimal across all $t$ values, which supports the validity of t-test approximation. As $t$ gets closer to -10 and 10, the potential error is close to 0. The error becomes more negative as $t$ get closer to 0. However, when $t$ is 0, the error becomes less negative.
+The potential error in $p$-value estimation is minimal across all $t$ values, which supports the validity of t-test approximation. As $t$ gets closer to -10 and 10, the potential error is close to 0. The error becomes larger as $t$ approaches 0. However, when $t$ is very close to 0, the error decreases.
 
   \item Suppose we wanted to have a tail probability within 10\% of the desired
   $\alpha=0.05$. Recall we did a left-tailed test using the further data.
@@ -99,6 +103,21 @@ The potential error in $p$-value estimation is minimal across all $t$ values, wh
   \[0.10 \alpha  \stackrel{set}{=} \underbrace{\frac{\text{skew}}{\sqrt{n}} \frac{(2t^2+1)}{6} f_Z(t)}_{\textrm{error}},\]
   which yields
   \[ n = \left(\frac{\text{skew}}{6(0.10\alpha)} (2t^2 + 1) f_Z(t)\right)^2.\]
+  <<size = 'scriptsize', message=F, warning=F>>=
+alpha <- 0.05
+#calculate the critical value for the left-tailed test
+t.crit <- qnorm(alpha, mean = 0, sd = 1)
+
+#calculate pdf
+pdf.sample <- dnorm(t.crit, mean = 0, sd = 1)
+
+#calculate n 
+n.sample <- (skew/(6*(0.10*alpha))*(2*t.crit^2+1)*pdf.sample)^2
+n.sample <- ceiling(n.sample) #round n to the closest positive integer
+n.sample
+@
+We would need a sample size of $n = $ \Sexpr{n.sample} to have a tail probability within 10\% of the desired
+  $\alpha=0.05$. This large sample size compensates for the skewness in the data, controlling the approximation error.
 \end{enumerate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

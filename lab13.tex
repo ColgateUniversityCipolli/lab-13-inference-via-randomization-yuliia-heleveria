@@ -136,19 +136,23 @@ The potential error in the computation of the $p$-value when testing $H_0: \mu_X
 \hldef{error.plot} \hlkwb{<-} \hlkwd{ggplot}\hldef{(dat.error.plot)}\hlopt{+}
 \hlkwd{geom_line}\hldef{(}\hlkwd{aes}\hldef{(}\hlkwc{x}\hldef{= t.vals,} \hlkwc{y} \hldef{= t.potential.error))}\hlopt{+} \hlcom{#plot the line for the errors}
 \hlkwd{theme_bw}\hldef{()}\hlopt{+}
-\hlkwd{labs}\hldef{(}\hlkwc{title} \hldef{=} \hlsng{"Edgeworth approximation for the error for p-value across t"}\hldef{,}
+\hlkwd{labs}\hldef{(}\hlkwc{title} \hldef{=} \hlsng{"Edgeworth approximation for the error for p-value"}\hldef{,}
      \hlkwc{x} \hldef{=} \hlsng{"t-statistics"}\hldef{,}
      \hlkwc{y} \hldef{=} \hlsng{"Potential error"}\hldef{)}
 \end{alltt}
 \end{kframe}
 \end{knitrout}
-\begin{knitrout}\scriptsize
+\begin{figure}[H] \begin{center}
+\begin{knitrout}
 \definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}
-\includegraphics[width=0.6\textwidth]{figure/unnamed-chunk-4-1} 
+\includegraphics[width=\maxwidth]{figure/unnamed-chunk-4-1} 
 \end{knitrout}
+\caption{Edgeworth approximation for the error for p-value across t} \label{plot.error} 
+\end{center}
+\end{figure}
 
 
-The potential error in $p$-value estimation is minimal across all $t$ values, which supports the validity of t-test approximation. As $t$ gets closer to -10 and 10, the potential error is close to 0. The error becomes more negative as $t$ get closer to 0. However, when $t$ is 0, the error becomes less negative.
+The potential error in $p$-value estimation is minimal across all $t$ values, which supports the validity of t-test approximation. As $t$ gets closer to -10 and 10, the potential error is close to 0. The error becomes larger as $t$ approaches 0. However, when $t$ is very close to 0, the error decreases.
 
   \item Suppose we wanted to have a tail probability within 10\% of the desired
   $\alpha=0.05$. Recall we did a left-tailed test using the further data.
@@ -157,6 +161,28 @@ The potential error in $p$-value estimation is minimal across all $t$ values, wh
   \[0.10 \alpha  \stackrel{set}{=} \underbrace{\frac{\text{skew}}{\sqrt{n}} \frac{(2t^2+1)}{6} f_Z(t)}_{\textrm{error}},\]
   which yields
   \[ n = \left(\frac{\text{skew}}{6(0.10\alpha)} (2t^2 + 1) f_Z(t)\right)^2.\]
+\begin{knitrout}\scriptsize
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hldef{alpha} \hlkwb{<-} \hlnum{0.05}
+\hlcom{#calculate the critical value for the left-tailed test}
+\hldef{t.crit} \hlkwb{<-} \hlkwd{qnorm}\hldef{(alpha,} \hlkwc{mean} \hldef{=} \hlnum{0}\hldef{,} \hlkwc{sd} \hldef{=} \hlnum{1}\hldef{)}
+
+\hlcom{#calculate pdf}
+\hldef{pdf.sample} \hlkwb{<-} \hlkwd{dnorm}\hldef{(t.crit,} \hlkwc{mean} \hldef{=} \hlnum{0}\hldef{,} \hlkwc{sd} \hldef{=} \hlnum{1}\hldef{)}
+
+\hlcom{#calculate n }
+\hldef{n.sample} \hlkwb{<-} \hldef{(skew}\hlopt{/}\hldef{(}\hlnum{6}\hlopt{*}\hldef{(}\hlnum{0.10}\hlopt{*}\hldef{alpha))}\hlopt{*}\hldef{(}\hlnum{2}\hlopt{*}\hldef{t.crit}\hlopt{^}\hlnum{2}\hlopt{+}\hlnum{1}\hldef{)}\hlopt{*}\hldef{pdf.sample)}\hlopt{^}\hlnum{2}
+\hldef{n.sample} \hlkwb{<-} \hlkwd{ceiling}\hldef{(n.sample)} \hlcom{#round n to the closest positive integer}
+\hldef{n.sample}
+\end{alltt}
+\begin{verbatim}
+## [1] 521
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+We would need a sample size of $n = $ 521 to have a tail probability within 10\% of the desired
+  $\alpha=0.05$. This large sample size compensates for the skewness in the data, controlling the approximation error.
 \end{enumerate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
