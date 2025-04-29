@@ -19,6 +19,7 @@ library(tidyverse)
 library(e1071)
 library(boot)
 library(boot.pval)
+library(xtable)
 @
 
 \begin{enumerate}
@@ -188,14 +189,135 @@ mean.resample.diff
 We performed 10,000 resamples with replacement and computed t-statistics for each resample. Then, we shifted the resamples to make sure that they reflect the null hypothesis. We verified that the shifted resamples were properly centered around 0 by checking that their means were approximately zero: \texttt{mean.resample.closer} = \Sexpr{mean.resample.closer}, \texttt{mean.resample.further} = \Sexpr{mean.resample.further}, and \texttt{mean.resample.diff} = \Sexpr{mean.resample.diff}.
   \item Compute the bootstrap $p$-value for each test using the shifted resamples. 
   How do these compare to the $t$-test $p$-values?
+  <<size = 'scriptsize', message=F, warning=F>>=
+#calculate t-statistics on the original sample
+t.obs.closer <- mean(dat.closer)/(dat.closer.sd/sqrt(n))
+t.obs.further <- mean(dat.further)/(dat.further.sd/sqrt(n))
+t.obs.diff <- mean(dat.diff)/(dat.diff.sd/sqrt(n))
+
+# p-value: the proportion of observations that are at least as supportive of Ha
+p.val.closer <- mean(resamples.null.closer >= t.obs.closer) #right-tailed test
+p.val.further <- mean(resamples.null.further <= t.obs.further) #left-tailed test
+p.val.diff <- mean(abs(resamples.null.diff) >= abs(t.obs.diff)) #two-tailed test
+
+#compare with the t-test p-values
+t.test.closer <- t.test(dat.closer, mu = 0, alternative = "greater") 
+t.test.further <- t.test(dat.further, mu = 0, alternative = "less") 
+t.test.diff <- t.test(dat.diff, mu = 0, alternative = "two.sided")
+
+#extract their p-values
+t.test.closer.p <- t.test.closer$p.value
+t.test.further.p <- t.test.further$p.value
+t.test.diff.p <- t.test.diff$p.value
+
+#create a comparison table
+comparison.table <-tibble(
+  "Case" = c("Closer", "Further", "Difference"),
+  "Bootstrap" = c(p.val.closer, p.val.further, p.val.diff),
+  "T-test" = c(t.test.closer.p, t.test.further.p, t.test.diff.p)
+)
+@
+<<echo=FALSE, results='asis'>>=
+comparison.table <- comparison.table %>%
+  mutate(
+    `T-test` = formatC(`T-test`, format = "e", digits = 2)
+  )
+comparison.table <- as.data.frame(comparison.table)
+print(xtable(comparison.table, caption = "Bootstrap and t-test p-values"), include.rownames = FALSE)
+@
+The bootstrap p-values for all three cases were estimated as 0, while the corresponding t-test p-values, although extremely small, were nonzero. The difference arises because the t-test p-values are based on theoretical calculations assuming an approximately normal distribution, which can detect very small probabilities. In contrast, the bootstrapping is based on a finite number of resamples, and with our data it did not produce any extreme t-statistics as the theoretical version. We have statistically discernible evidence against the null hypothesis in each case.
+
     \item What is the 5$^{th}$ percentile of the shifted resamples under the null hypothesis? 
   Note this value approximates $t_{0.05, n-1}$. Compare these values in each case.
+  <<size = 'scriptsize', message=F, warning=F>>=
+#get 5th percentile of the shifted resamples
+close.5th <- quantile(resamples.null.closer, probs = 0.05)
+further.5th <- quantile(resamples.null.further, probs = 0.05)
+diff.5th <- quantile(resamples.null.diff, probs = 0.05)
+
+#calculate theoretical t-distribution value
+df <- n-1
+#approximate t0.05,n-1
+t.critical.5th <- qt(0.05, df)
+
+#comparison table
+comparison.table.percentile <-tibble(
+  "Case" = c("Closer", "Further", "Difference"),
+  "Bootstrap" = c(close.5th, further.5th, diff.5th),
+  "Theoretical" = rep(t.critical.5th, 3)
+)
+@
+<<echo=FALSE, results='asis'>>=
+comparison.table.percentile <- as.data.frame(comparison.table.percentile)
+print(xtable(comparison.table.percentile, caption = "Bootstrap and theoretical 5th percentile of the shifted resamples under the null hypothesis"), include.rownames = FALSE)
+@
+For the left-tailed hypothesis test, which we use for further data, the critical value for rejecting the null hypothesis is based on the 5th percentile of the shifted resamples. This value approximates $t_{0.05, n-1}$. Our approximation for $t_{0.05, n-1}$ (\Sexpr{round(further.5th, 2)}) is very close to the theoretical value \Sexpr{round(t.critical.5th,2)}. However, the theoretical value is slightly more extreme than the approximation. Therefore, the bootstrapping approximates the t-distribution well. However, we cannot draw concrete conclusions from comparing the right-tailed hypothesis test (closer data) and two-tailed hypothesis test (difference data) to $t_{0.05, n-1}$, as the value for rejecting for null hypothesis for right-tailed test is based on 95th percentile of the shifted resampes and the value for rejecting the null hypothesis for two-tailed test is based on 2.5th and 97.5 percentiles of the shifted resamples.
   \item Compute the bootstrap confidence intervals using the resamples. How do these 
   compare to the $t$-test confidence intervals?
+  <<size = 'scriptsize', message=F, warning=F>>=
+mean.storage <- tibble(closer = rep(NA, n.resamples),
+                         further = rep(NA, n.resamples),
+                         diff = rep(NA, n.resamples))
+
+#perform resampling
+for (i in 1:n.resamples){
+  #resample
+  resample.closer <- sample(dat.closer, size = n, replace = T) 
+  resample.further <- sample(dat.further, size = n, replace = T) 
+  resample.diff <- sample(dat.diff, size = n, replace = T)
+  #calculate and store the mean
+  mean.storage$closer[i] = mean(resample.closer)
+  mean.storage$further[i] = mean(resample.further)
+  mean.storage$diff[i] = mean(resample.diff)
+}
+#confidence interval for closer data
+ci.lower.closer <- quantile(mean.storage$closer, probs = 0.025)
+ci.upper.closer <- quantile(mean.storage$closer, probs = 0.975)
+
+#confidence interval for further data
+ci.lower.further <- quantile(mean.storage$further, probs = 0.025)
+ci.upper.further <- quantile(mean.storage$further, probs = 0.975)
+
+#confidence interval for difference data
+ci.lower.diff <- quantile(mean.storage$diff, probs = 0.025)
+ci.upper.diff <- quantile(mean.storage$diff, probs = 0.975)
+
+#compute t-test confidence intervals
+t.test.closer <- t.test(dat.closer, mu = 0, alternative = "two.sided") 
+t.test.further <- t.test(dat.further, mu = 0, alternative = "two.sided") 
+t.test.diff <- t.test(dat.diff, mu = 0, alternative = "two.sided")
+
+#extract t-test confidence intervals 
+ci.closer.t.test <- t.test.closer$conf.int
+ci.closer.t.test.lower <- ci.closer.t.test[1] #get t-test CI for closer data
+ci.closer.t.test.upper <- ci.closer.t.test[2]
+
+ci.further.t.test <- t.test.further$conf.int
+ci.further.t.test.lower <- ci.further.t.test[1] #get t-test CI for further data
+ci.further.t.test.upper <- ci.further.t.test[2]
+
+ci.diff.t.test <- t.test.diff$conf.int
+ci.diff.t.test.lower <- ci.diff.t.test[1] #get t-test CI for diff data
+ci.diff.t.test.upper <- ci.diff.t.test[2]
+
+#create a comparison table
+ci.comparison.table <- tibble(
+  "Case" = c("Closer", "Further", "Difference"),
+  "Bootstrap CI Lower" = c(ci.lower.closer, ci.lower.further, ci.lower.diff),
+  "T-test CI Lower" = c(ci.closer.t.test.lower, ci.further.t.test.lower, ci.diff.t.test.lower),
+  "Bootstrap CI Upper" = c(ci.upper.closer, ci.upper.further, ci.upper.diff),
+  "T-test CI Upper" = c(ci.closer.t.test.upper, ci.further.t.test.upper, ci.diff.t.test.upper)
+)
+@
+<<echo=FALSE, results='asis'>>=
+ci.comparison.table <- as.data.frame(ci.comparison.table)
+print(xtable(ci.comparison.table, caption = "Bootstrap and t-test confidence intervals"), include.rownames = FALSE)
+@
+Overall, the bootstrap and t-test confidence intervals are very similar in all three cases. The differences between the lower and upper bounds produced by the two methods are minimal, with discrepancies of approximately only 0.01.
 \end{enumerate}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Question 4
+% Question 3
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \item Complete the following steps to revisit the analyses from lab 11 using the
@@ -203,31 +325,278 @@ randomization procedure.
 \begin{enumerate}
 \item Now, consider the zebra finch data. We do not know the generating distributions
 for the closer, further, and difference data, so perform the randomization procedure
+<<size = 'scriptsize', message=F, warning=F>>=
+R <- 10000
+rand <- tibble(t.stat.closer = rep(NA, R), #place to store statistics 
+               t.stat.further = rep(NA, R),
+               t.stat.diff = rep(NA, R))
+
+#shift the data to be mean 0 under H0
+closer.shifted <- dat.closer - mu0
+further.shifted <- dat.further - mu0
+diff.shifted <- dat.diff - mu0
+
+#Randomize / Shuffle
+for(i in 1:R){
+  #randomize data
+  curr.rand.closer <- closer.shifted *
+    sample(x = c(-1, 1),
+           size = n,
+           replace = T)
+  curr.rand.further <- further.shifted *
+    sample(x = c(-1, 1),
+           size = n,
+           replace = T)
+  curr.rand.diff <- diff.shifted *
+    sample(x = c(-1, 1),
+           size = n,
+           replace = T)
+  #calculate and store t-statistics
+  rand$t.stat.closer[i] <- mean(curr.rand.closer)/(dat.closer.sd/sqrt(n))
+  rand$t.stat.further[i] <- mean(curr.rand.further)/(dat.further.sd/sqrt(n))
+  rand$t.stat.diff[i] <- mean(curr.rand.diff)/(dat.diff.sd/sqrt(n))
+}
+#shift randomized statistics back
+rand <- rand |>
+  mutate(t.stat.closer = t.stat.closer + mu0)|>
+  mutate(t.stat.further = t.stat.further + mu0)|>
+  mutate(t.stat.diff = t.stat.diff + mu0)
+@
+We performed a non-parametric randomization test. It allows us to approximate the null distribution of the t-statistics based purely on the observed data, without relying on normality. First, we shifted each dataset (closer, further, and difference) so that their means aligned with the null hypothesis. Then, we multiplied each data point by either +1 or -1. For each randomized sample, we computed the t-statistic and repeated this process 10,000 times to approximate the null distribution without assuming normality. 
   \item Compute the randomization test $p$-value for each test.
+  <<size = 'scriptsize', message=F, warning=F>>=
+#calculate deltas
+delta.closer <- abs(mean(dat.closer) - mu0)/(dat.closer.sd/sqrt(n))
+delta.further <- abs(mean(dat.further) - mu0)/(dat.further.sd/sqrt(n))
+delta.diff <- abs(mean(dat.diff) - mu0)/(dat.diff.sd/sqrt(n))
+
+#calculate p-value for closer data
+high.closer <- mu0 + delta.closer
+p.close.rand <- mean(rand$t.stat.closer >= high.closer)
+
+#calculate p-value for further data
+low.further <- mu0 - delta.further
+p.further.rand <- mean(rand$t.stat.further <= low.further)
+
+#calculate p-value for difference data
+low.diff <- mu0 - delta.further
+high.diff <- mu0 + delta.further
+p.diff.rand <- mean(rand$t.stat.diff <= low.diff) + mean(rand$t.stat.diff >= high.diff)
+
+p.close.rand
+p.further.rand
+p.diff.rand
+@
+In each scenario, the $p$-values are 0, indicating that none of the randomized t-statistics were as extreme as theoretical statistics. This provides statistically discernible evidence against the null hypothesis in each case.
   \item Compute the randomization confidence interval by iterating over values of $\mu_0$.\\
   \textbf{Hint:} You can ``search" for the lower bound from $Q_1$ and subtracting by 0.0001, 
   and the upper bound using $Q_3$ and increasing by 0.0001. You will continue until you find 
   the first value for which the two-sided $p$-value is greater than or equal to 0.05.
+  <<size = 'scriptsize', message=F, warning=F>>=
+#confidence interval for closer data
+R <- 1000
+mu0.iterate <- 0.0001
+starting.point <- mean(dat.closer)
+
+#get the lower bound
+mu.lower <- starting.point
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.closer - mu.lower
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.lower) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.closer) - mu.lower)
+  high<- mu.lower + delta  
+  p.val <- mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.lower <- mu.lower - mu0.iterate
+  }
+}
+#get the upper bound
+mu.upper <- mean(dat.closer)
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.closer - mu.upper
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.upper) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.closer) - mu.upper)
+  high<- mu.upper + delta  
+  p.val <- mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.upper <- mu.upper + mu0.iterate
+  }
+}
+ci.close.rand <- c(mu.lower, mu.upper)
+
+#confidence interval for further data
+#get the lower bound
+starting.point <- mean(dat.further)
+mu.lower <- starting.point
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.further - mu.lower
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.lower) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.further) - mu.lower)
+  low <- mu.lower - delta  
+  p.val <- mean(rand$xbar <= low)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.lower <- mu.lower - mu0.iterate
+  }
+}
+#get the upper bound
+mu.upper <- mean(dat.further)
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.further - mu.upper
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.upper) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.further) - mu.upper)
+  low <- mu.upper - delta  
+  p.val <- mean(rand$xbar <= low)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.upper <- mu.upper + mu0.iterate
+  }
+}
+ci.further.rand <- c(mu.lower, mu.upper)
+
+#confidence interval for difference data
+#get the lower bound
+starting.point <- mean(dat.diff)
+mu.lower <- starting.point
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.diff - mu.lower
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.lower) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.diff) - mu.lower)
+  low <- mu.lower - delta
+  high <- mu.lower + delta
+  p.val <- mean(rand$xbar <= low) + mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.lower <- mu.lower - mu0.iterate
+  }
+}
+#get the upper bound
+mu.upper <- mean(dat.diff)
+repeat{
+  rand <- tibble(xbar = rep(NA, R))
+  
+  # PREPROCESSING: shift the data to be mean 0 under H0
+  dat.shift <- dat.diff - mu.upper
+  # RANDOMIZE / SHUFFLE
+  for(i in 1:R){
+    curr.rand <- dat.shift *
+      sample(x = c(-1, 1),
+             size = n,
+             replace = T)
+    
+    rand$xbar[i] <- mean(curr.rand)
+  }
+  rand <- rand |>
+    mutate(xbar = xbar + mu.upper) # shifting back
+  
+  # p-value 
+  delta <- abs(mean(dat.diff) - mu.upper)
+  low <- mu.upper - delta  
+  high <- mu.upper + delta
+  p.val <- mean(rand$xbar <= low) + mean(rand$xbar >= high)
+  
+  if(p.val < 0.05){
+    break
+  }else{
+    mu.upper <- mu.upper + mu0.iterate
+  }
+}
+ci.diff.rand <- c(mu.lower, mu.upper)
+
+ci.close.rand
+ci.further.rand
+ci.diff.rand
+@
+These confidence intervals (close data: \Sexpr{ci.close.rand}; further data: \Sexpr{ci.further.rand}; and difference data: \Sexpr{ci.diff.rand}) closely match the confidence intervals obtained using the bootstrap and t-test procedures, suggesting that all three methods provide consistent estimates for these data.
 \end{enumerate}
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Optional Question
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\item \textbf{Optional Challenge:} In this lab, you performed resampling to 
-approximate the sampling distribution of the $T$ statistic using
-\[T = \frac{\bar{x}_r - 0}{s/\sqrt{n}}.\]
-I'm curious whether it is better/worse/similar if we computed the statistics
-using the sample standard deviation of the resamples ($s_r$), instead of the 
-original sample ($s$)
-  \[T = \frac{\bar{x}_r - 0}{s_r/\sqrt{n}}.\]
-\begin{enumerate}
-  \item Perform a simulation study to evaluate the Type I error for conducting this
-hypothesis test both ways.
-  \item Using the same test case(s) as part (a), compute bootstrap confidence 
-  intervals and assess their coverage -- how often do we `capture' the parameter
-of interest?
-\end{enumerate}
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % End Document
